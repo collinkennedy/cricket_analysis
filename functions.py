@@ -370,3 +370,32 @@ def write_innings_info(innings_info_df: pd.DataFrame, cnx: mysql.connector.conne
 
     cnx.commit()
     cursor.close()
+
+def clear_contents(cnx: mysql.connector.connection_cext.CMySQLConnection ):
+
+    tables = ['players','teams','match_info','innings_info']
+    for table in tables:
+        cursor = cnx.cursor()
+
+        query = """ 
+        SET FOREIGN_KEY_CHECKS = 0; """
+
+        cursor.execute(query)
+
+        print("Foreign key checks disabled")
+
+        # Truncate the players table
+        query = """ 
+        TRUNCATE TABLE {}""".format(table)
+
+        cursor.execute(query)
+
+        print(cursor.rowcount, "rows deleted")
+
+        # Enable foreign key checks again
+        query = """ 
+        SET FOREIGN_KEY_CHECKS = 1; """
+
+        cursor.execute(query)
+
+        print("Foreign key checks enabled")
