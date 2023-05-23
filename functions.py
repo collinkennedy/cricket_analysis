@@ -7,21 +7,55 @@ import mysql.connector
 
 
 ###############################################
+# def check_row_exists(row_data: pd.DataFrame, table_name: str, cnx, table_columns: list) -> bool:
+#     """
+#     Check if a row from a pandas DataFrame exists in a database table.
+
+#     Args:
+#         row_data (pd.DataFrame): The row data to check for existence in the database table.
+#         table_name (str): The name of the database table.
+#         cnx: The MySQL connection object.
+#         table_columns (list): The list of column names in the database table.
+
+#     Returns:
+#         bool: True if the row exists in the database table, False otherwise.
+#     """
+#     # Convert int64 values to int
+#     print("TEST")
+#     row_data = [int(value) if isinstance(value, np.int64) else value for value in row_data]
+
+#     # Generate the query
+#     conditions = ' AND '.join([f"{column} = %s" for column in table_columns])
+#     query = f"SELECT COUNT(*) FROM {table_name} WHERE {conditions}"
+
+#     print("query: ",query)
+#     # Execute the query with row_data as parameters
+#     cursor = cnx.cursor()
+#     cursor.execute(query, tuple(row_data))
+
+#     # Check if any matching rows are returned
+#     row_count = cursor.fetchall()[0][0]
+#     row_exists = row_count > 0
+
+#     cursor.close()
+#     return row_exists
+
+
+###############################################
 def parse_team_player_info(json_data: dict):
     """
-    takes json data as
+    Parses the team and player information from a JSON object and returns them as a pandas DataFrame.
 
     Parameters:
-    --------------
-    - json_data (dict) : json object as a dictionary
-
+    ------------
+        json_data (dict): JSON object as a dictionary containing team and player information.
 
     Returns:
-    -------------
-    - player_df (pandas DataFrame): 
-    
-    
+    -----------
+        team_df (pandas DataFrame): DataFrame containing unique team names.
+        player_df (pandas DataFrame): DataFrame containing player information with columns 'player_name' and 'registryID'.
     """
+
     player_columns = [
         "team",
         "player_name",
@@ -55,7 +89,40 @@ def parse_team_player_info(json_data: dict):
 
 
 def write_players_to_cricket_db(player_df: pd.DataFrame, cnx: mysql.connector.connection_cext.CMySQLConnection):
-    """Writes player data to players table in cricket_db"""
+    """
+    Writes player data to the 'players' table in the cricket_db database.
+
+    Parameters:
+    ------------
+        player_df (pd.DataFrame): Pandas DataFrame containing the player data.
+        cnx (mysql.connector.connection_cext.CMySQLConnection): MySQL database connection object.
+
+    Returns:
+    -----------
+        None
+
+    Raises:
+    ------------
+        mysql.connector.IntegrityError: If a duplicate entry is encountered and insertion is attempted.
+
+    Notes:
+    ------------
+        - The 'player_df' DataFrame should have columns matching the columns in the 'players' table,
+          except for any auto-incremented primary key column.
+        - Duplicate entries will be skipped and not inserted into the database.
+
+    Example:
+    -----------
+        # Establish a MySQL connection
+        cnx = mysql.connector.connect(user='your_username', password='your_password', host='localhost', database='your_database')
+
+        # Prepare the player data DataFrame
+        player_df = pd.DataFrame(...)  # Your player data
+
+        # Write player data to the database
+        write_players_to_cricket_db(player_df, cnx)
+    """
+
     table_name = 'players'
     columns = ', '.join(player_df.columns)
     sql = f"INSERT INTO {table_name} ({columns}) VALUES ({', '.join(['%s'] * len(player_df.columns))})"
@@ -73,12 +140,37 @@ def write_players_to_cricket_db(player_df: pd.DataFrame, cnx: mysql.connector.co
 
     cursor.close()
 
-
-
-
 ########################################################
 def write_teams_to_cricket_db(team_df: pd.DataFrame, cnx: mysql.connector.connection_cext.CMySQLConnection):
-    """Write unique teams to teams table in cricket_db"""
+    """
+    Writes unique team data to the 'teams' table in the cricket_db database.
+
+    Parameters:
+        team_df (pd.DataFrame): Pandas DataFrame containing the team data.
+        cnx (mysql.connector.connection_cext.CMySQLConnection): MySQL database connection object.
+
+    Returns:
+        None
+
+    Raises:
+        mysql.connector.IntegrityError: If a duplicate entry is encountered and insertion is attempted.
+
+    Notes:
+        - The 'team_df' DataFrame should have columns matching the columns in the 'teams' table,
+          except for any auto-incremented primary key column.
+        - Duplicate entries will be skipped and not inserted into the database.
+
+    Example:
+        # Establish a MySQL connection
+        cnx = mysql.connector.connect(user='your_username', password='your_password', host='localhost', database='your_database')
+
+        # Prepare the team data DataFrame
+        team_df = pd.DataFrame(...)  # Your team data
+
+        # Write team data to the database
+        write_teams_to_cricket_db(team_df, cnx)
+    """
+
     table_name = 'teams'
     columns = ', '.join(team_df.columns)
     sql = f"INSERT INTO {table_name} ({columns}) VALUES ({', '.join(['%s'] * len(team_df.columns))})"
@@ -101,7 +193,23 @@ def write_teams_to_cricket_db(team_df: pd.DataFrame, cnx: mysql.connector.connec
 ################################################
 def parse_match_info(json_data: dict, cnx: mysql.connector.connection_cext.CMySQLConnection):
 
-    """ parse that match info from the json and return a named dataframe """
+    """
+    Parses match information from the provided JSON data and returns a DataFrame.
+
+    Parameters:
+        json_data (dict): JSON data as a dictionary.
+        cnx (mysql.connector.connection_cext.CMySQLConnection): MySQL database connection object.
+
+    Returns:
+        match_info_df (pd.DataFrame): DataFrame containing the parsed match information.
+
+    Example:
+        # Establish a MySQL connection
+        cnx = mysql.connector.connect(user='your_username', password='your_password', host='localhost', database='your_database')
+
+        # Parse match information from JSON data
+        match_info_data = parse_match_info(json_data, cnx)
+    """
 
     #balls per over
     balls_per_over = json_data['info']['balls_per_over']
@@ -251,6 +359,19 @@ def parse_match_info(json_data: dict, cnx: mysql.connector.connection_cext.CMySQ
 
 ######################################################
 def write_match_info(match_info_df: pd.DataFrame, cnx: mysql.connector.connection_cext.CMySQLConnection):
+
+    """
+    Writes match information DataFrame to the 'match_info' table in the cricket_db database.
+
+    Parameters:
+    ------------
+        - match_info_df (pd.DataFrame): DataFrame containing match information.
+        - cnx (mysql.connector.connection_cext.CMySQLConnection): MySQL database connection object.
+
+    Returns:
+    ------------
+        - None
+    """
     match_info_tuples = match_info_df.values.tolist()
 
     #write to database
@@ -261,6 +382,8 @@ def write_match_info(match_info_df: pd.DataFrame, cnx: mysql.connector.connectio
     # Execute the INSERT statement for each row
     cursor = cnx.cursor()
     for row in match_info_tuples:
+        #check if the row exists:
+
         try:
             cursor.execute(sql, row)
             cnx.commit()
@@ -270,14 +393,32 @@ def write_match_info(match_info_df: pd.DataFrame, cnx: mysql.connector.connectio
             pass
 
     cursor.close()
-    
+
+
+
+
+
 
 def parse_innings_info(json_data: dict, match_info_df: pd.DataFrame, cnx: mysql.connector.connection_cext.CMySQLConnection):
+
+    """
+    Parse innings information from the JSON data and return a DataFrame.
+
+    Parameters:
+    -----------
+        - json_data (dict): JSON data containing innings information.
+        - match_info_df (pd.DataFrame): DataFrame containing match information.
+        - cnx (mysql.connector.connection_cext.CMySQLConnection): MySQL database connection object.
+
+    Returns:
+    ----------
+        - pd.DataFrame: DataFrame containing innings information.
+"""
 
     # get distinct match_id from the match_info table
     cursor = cnx.cursor()
     query = """
-    SELECT MAX(match_id) -- this will be themost recent match_id
+    SELECT MAX(match_id) -- this will be the most recent match_id
     FROM match_info 
     """
 
@@ -351,6 +492,20 @@ def parse_innings_info(json_data: dict, match_info_df: pd.DataFrame, cnx: mysql.
 
 ########################################################
 def write_innings_info(innings_info_df: pd.DataFrame, cnx: mysql.connector.connection_cext.CMySQLConnection):
+
+    """
+    Writes innings information DataFrame to the 'innings_info' table in the cricket_db database.
+
+    Parameters:
+    -----------
+        - innings_info_df (pd.DataFrame): DataFrame containing innings information.
+        - cnx (mysql.connector.connection_cext.CMySQLConnection): MySQL database connection object.
+
+    Returns:
+    -----------
+        - None
+    """
+
     innings_info_tuples = innings_info_df.values.tolist()
 
     #write to database
@@ -371,7 +526,23 @@ def write_innings_info(innings_info_df: pd.DataFrame, cnx: mysql.connector.conne
     cnx.commit()
     cursor.close()
 
+
+
+
 def clear_contents(cnx: mysql.connector.connection_cext.CMySQLConnection ):
+
+    """
+    Clears the contents of specific tables in the cricket_db database.
+
+    Parameters:
+    ------------
+        - cnx (mysql.connector.connection_cext.CMySQLConnection): MySQL database connection object.
+
+    Returns:
+    -----------
+       -  None
+    """
+
 
     tables = ['players','teams','match_info','innings_info']
     for table in tables:
@@ -399,3 +570,5 @@ def clear_contents(cnx: mysql.connector.connection_cext.CMySQLConnection ):
         cursor.execute(query)
 
         print("Foreign key checks enabled")
+
+ 

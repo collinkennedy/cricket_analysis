@@ -48,8 +48,11 @@ with open("odis_json/odis_json.zip", "wb") as f:
 os.system("unzip odis_json/odis_json.zip -d odis_json")
 
 #connect to MySQL database cricket_db
-cnx = mysql.connector.connect(user='webmaster', password='Zelus2cool123',
-                              database='cricket_db')
+db_username = input("Please enter database username: ")
+db_pw = input("Please enter db password: ")
+db_name = input("Please enter the name of the database: ")
+cnx = mysql.connector.connect(user=db_username, password=db_pw,
+                              database=db_name)
 
 #clear contents
 clear_contents(cnx = cnx)
@@ -121,7 +124,7 @@ SELECT
 	SUM(CASE WHEN team = winner THEN 1 ELSE 0 END)*1.0/COUNT(*)*1.0 as win_percentage
 FROM temp
 GROUP BY 1,2,3
-ORDER BY season, gender, team"""
+ORDER BY season, gender, SUM(CASE WHEN team = winner THEN 1 ELSE 0 END)*1.0/COUNT(*)*1.0 DESC """
 
 cursor.execute(query1)
 result1 = cursor.fetchall()
